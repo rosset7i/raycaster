@@ -1,72 +1,55 @@
+use consts::{
+    FRAGMENT_SHADER_SRC, VERTEX_SHADER,
+    errors::WINDOW_ERROR,
+    window::{HEIGHT, WIDTH},
+};
 use glium::{
     Program, Surface, VertexBuffer,
     backend::glutin::SimpleWindowBuilder,
-    implement_vertex,
     index::{NoIndices, PrimitiveType},
-    uniforms::EmptyUniforms,
+    uniform,
     winit::{
         event::{Event, WindowEvent},
         event_loop::EventLoop,
     },
 };
+use vertexes::draw;
 
-#[derive(Copy, Clone)]
-struct Vertex {
-    position: [f32; 2],
-}
-
-implement_vertex!(Vertex, position);
-
-const WIDTH: u32 = 600;
-const HEIGHT: u32 = 600;
+mod consts;
+mod vertexes;
 
 fn main() {
-    let event_loop = EventLoop::builder().build().unwrap();
-    let (_window, display) = SimpleWindowBuilder::new()
+    let event_loop = EventLoop::builder()
+        .build()
+        .unwrap_or_else(|err| panic!("{} {}", WINDOW_ERROR, err));
+
+    let (window, display) = SimpleWindowBuilder::new()
         .with_inner_size(WIDTH, HEIGHT)
         .build(&event_loop);
 
-    let vertex_shader_src = r#"
-        #version 140
+    let program = Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER_SRC, None).unwrap();
+    let indices = NoIndices(PrimitiveType::TrianglesList);
 
-        in vec2 position;
-
-        void main() {
-            gl_Position = vec4(position, 0.0, 1.0);
-        }
-    "#;
-
-    let fragment_shader_src = r#"
-        #version 140
-
-        out vec4 color;
-
-        void main() {
-            color = vec4(1.0, 0.0, 0.0, 1.0);
-        }
-    "#;
-
-    let program =
-        Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
-
-    let triangle = draw();
-    let indices = NoIndices(PrimitiveType::LineLoop);
-    let vertex_buffer = VertexBuffer::new(&display, &triangle).unwrap();
-
+    let mut t: f32 = 0.0;
     #[allow(deprecated)]
     let _ = event_loop.run(move |event, window_target| {
         match event {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::CloseRequested => window_target.exit(),
                 WindowEvent::RedrawRequested => {
+                    t += 0.01;
+                    let x_off = t.sin() * 0.5;
+
+                    let drawing = draw();
+                    let vertex_buffer = VertexBuffer::new(&display, &drawing).unwrap();
                     let mut target = display.draw();
                     target.clear_color(0.0, 0.0, 0.0, 1.0);
                     target
                         .draw(
                             &vertex_buffer,
-                            &indices,
+                            indices,
                             &program,
-                            &EmptyUniforms,
+                            &uniform! {x: x_off},
                             &Default::default(),
                         )
                         .unwrap();
@@ -74,24 +57,8 @@ fn main() {
                 }
                 _ => (),
             },
+            Event::AboutToWait => window.request_redraw(),
             _ => (),
         };
     });
-}
-
-fn draw() -> Vec<Vertex> {
-    let vertex_1 = Vertex {
-        position: [-0.5, -0.5],
-    };
-    let vertex_2 = Vertex {
-        position: [-0.5, 0.5],
-    };
-    let vertex_3 = Vertex {
-        position: [0.5, 0.5],
-    };
-    let vertex_4 = Vertex {
-        position: [0.5, -0.5],
-    };
-
-    vec![vertex_1, vertex_2, vertex_3, vertex_4]
 }
