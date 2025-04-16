@@ -13,30 +13,29 @@ implement_vertex!(Vertex, position, color);
 pub fn draw_player(x: f32, y: f32) -> Vec<Vertex> {
     let color = [0.0, 1.0, 0.0];
 
-    let bottom_left = Vertex {
+    let center = Vertex {
         position: [x, y],
         color,
     };
-    let top_left = Vertex {
-        position: [x, y + 60.0],
+    let top = Vertex {
+        position: [x, y + 15.0],
         color,
     };
-    let top_right = Vertex {
-        position: [x + 60.0, y + 60.0],
+    let right = Vertex {
+        position: [x + 15.0, y],
         color,
     };
-    let bottom_right = Vertex {
-        position: [x + 60.0, y],
+    let left = Vertex {
+        position: [x - 15.0, y],
+        color,
+    };
+    let bottom = Vertex {
+        position: [x, y - 15.0],
         color,
     };
 
     vec![
-        bottom_left,
-        top_left,
-        top_right,
-        top_right,
-        bottom_right,
-        bottom_left,
+        center, top, left, center, bottom, left, center, bottom, right, center, top, right, top,
     ]
 }
 

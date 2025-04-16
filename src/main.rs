@@ -1,7 +1,5 @@
-use std::f32::consts::PI;
-
 use consts::{
-    FRAGMENT_SHADER_SRC, VELOCITY_MULTIPLIER, VERTEX_SHADER,
+    FRAGMENT_SHADER_SRC, VERTEX_SHADER,
     errors::{BUFFER_ERROR, DRAWING_ERROR, PROGRAM_ERROR, WINDOW_ERROR},
     window::{HEIGHT, WIDTH},
 };
@@ -18,85 +16,15 @@ use glium::{
         keyboard::{KeyCode, PhysicalKey},
     },
 };
+use movement::{Direction, PlayerPosition, Point};
 use vertexes::{Vertex, draw_map, draw_player};
 
 mod consts;
+mod movement;
 mod vertexes;
 
 static TRIANGLE_INDICES: NoIndices = NoIndices(PrimitiveType::TrianglesList);
 static LINE_INDICES: NoIndices = NoIndices(PrimitiveType::LinesList);
-
-#[derive(Default, Debug)]
-struct Point {
-    x: f32,
-    y: f32,
-}
-
-impl Point {
-    fn from(x: f32, y: f32) -> Point {
-        Point { x, y }
-    }
-}
-
-enum Direction {
-    Left,
-    Right,
-}
-
-#[derive(Default)]
-struct PlayerPosition {
-    coordinates: Point,
-    angle: f32,
-}
-
-impl PlayerPosition {
-    fn new(coordinates: Point, angle: f32) -> PlayerPosition {
-        PlayerPosition { coordinates, angle }
-    }
-
-    fn get_deltas(&self) -> Point {
-        Point {
-            x: self.angle.cos() * VELOCITY_MULTIPLIER,
-            y: self.angle.sin() * VELOCITY_MULTIPLIER,
-        }
-    }
-
-    fn move_up(&mut self) {
-        let deltas = self.get_deltas();
-
-        self.coordinates.x += deltas.x;
-        self.coordinates.y += deltas.y;
-    }
-
-    fn move_down(&mut self) {
-        let deltas = self.get_deltas();
-
-        self.coordinates.x -= deltas.x;
-        self.coordinates.y -= deltas.y;
-    }
-
-    fn rotate(&mut self, direction: Direction) {
-        match direction {
-            Direction::Left => self.angle -= 0.1,
-            Direction::Right => self.angle += 0.1,
-        }
-
-        if self.angle < 0.0 {
-            self.angle += 2.0 * PI;
-        } else if self.angle > 2.0 * PI {
-            self.angle -= 2.0 * PI;
-        }
-    }
-
-    fn get_camera_line_position(&self) -> Point {
-        let deltas = self.get_deltas();
-
-        Point {
-            x: self.coordinates.x + deltas.x * VELOCITY_MULTIPLIER,
-            y: self.coordinates.y + deltas.y * VELOCITY_MULTIPLIER,
-        }
-    }
-}
 
 fn main() {
     let start_position = Point::from(500.0, 500.0);
