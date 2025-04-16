@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use consts::{
-    FRAGMENT_SHADER_SRC, VERTEX_SHADER,
+    FRAGMENT_SHADER_SRC, VELOCITY_MULTIPLIER, VERTEX_SHADER,
     errors::{BUFFER_ERROR, DRAWING_ERROR, PROGRAM_ERROR, WINDOW_ERROR},
     window::{HEIGHT, WIDTH},
 };
@@ -23,14 +23,84 @@ use vertexes::{Vertex, draw_map, draw_player};
 mod consts;
 mod vertexes;
 
+static TRIANGLE_INDICES: NoIndices = NoIndices(PrimitiveType::TrianglesList);
+static LINE_INDICES: NoIndices = NoIndices(PrimitiveType::LinesList);
+
+#[derive(Default, Debug)]
+struct Point {
+    x: f32,
+    y: f32,
+}
+
+impl Point {
+    fn from(x: f32, y: f32) -> Point {
+        Point { x, y }
+    }
+}
+
+enum Direction {
+    Left,
+    Right,
+}
+
+#[derive(Default)]
+struct PlayerPosition {
+    coordinates: Point,
+    angle: f32,
+}
+
+impl PlayerPosition {
+    fn new(coordinates: Point, angle: f32) -> PlayerPosition {
+        PlayerPosition { coordinates, angle }
+    }
+
+    fn get_deltas(&self) -> Point {
+        Point {
+            x: self.angle.cos() * VELOCITY_MULTIPLIER,
+            y: self.angle.sin() * VELOCITY_MULTIPLIER,
+        }
+    }
+
+    fn move_up(&mut self) {
+        let deltas = self.get_deltas();
+
+        self.coordinates.x += deltas.x;
+        self.coordinates.y += deltas.y;
+    }
+
+    fn move_down(&mut self) {
+        let deltas = self.get_deltas();
+
+        self.coordinates.x -= deltas.x;
+        self.coordinates.y -= deltas.y;
+    }
+
+    fn rotate(&mut self, direction: Direction) {
+        match direction {
+            Direction::Left => self.angle -= 0.1,
+            Direction::Right => self.angle += 0.1,
+        }
+
+        if self.angle < 0.0 {
+            self.angle += 2.0 * PI;
+        } else if self.angle > 2.0 * PI {
+            self.angle -= 2.0 * PI;
+        }
+    }
+
+    fn get_camera_line_position(&self) -> Point {
+        let deltas = self.get_deltas();
+
+        Point {
+            x: self.coordinates.x + deltas.x * VELOCITY_MULTIPLIER,
+            y: self.coordinates.y + deltas.y * VELOCITY_MULTIPLIER,
+        }
+    }
+}
+
 fn main() {
-    //TODO: This should be struct,
-    //Position should be a Enum
-    let mut position_x: f32 = 500.0;
-    let mut position_y: f32 = 500.0;
-    let mut player_angle: f32 = 0.0;
-    let mut position_delta_x: f32 = player_angle.cos() * 5.0;
-    let mut position_delta_y: f32 = player_angle.sin() * 5.0;
+    let start_position = Point::from(500.0, 500.0);
+    let mut player_position = PlayerPosition::new(start_position, 0.0);
 
     let event_loop = EventLoop::builder()
         .build()
@@ -43,9 +113,6 @@ fn main() {
     let program = Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER_SRC, None)
         .unwrap_or_else(|err| panic!("{PROGRAM_ERROR} {err}"));
 
-    let indices = NoIndices(PrimitiveType::TrianglesList);
-    let line_indices = NoIndices(PrimitiveType::LinesList);
-
     let ortho = Mat4::orthographic_rh_gl(0.0, WIDTH as f32, HEIGHT as f32, 0.0, -1.0, 1.0);
 
     #[allow(deprecated)]
@@ -55,15 +122,9 @@ fn main() {
                 event,
                 window_target,
                 &display,
-                indices,
-                line_indices,
                 &program,
-                &mut position_x,
-                &mut position_y,
                 ortho,
-                &mut position_delta_x,
-                &mut position_delta_y,
-                &mut player_angle,
+                &mut player_position,
             ),
             Event::AboutToWait => window.request_redraw(),
             _ => (),
@@ -75,29 +136,13 @@ fn handle_window_event(
     event: WindowEvent,
     window_target: &ActiveEventLoop,
     display: &Display<WindowSurface>,
-    indices: NoIndices,
-    line_indices: NoIndices,
     program: &Program,
-    position_x: &mut f32,
-    position_y: &mut f32,
     ortho: Mat4,
-    positon_delta_x: &mut f32,
-    positon_delta_y: &mut f32,
-    angle: &mut f32,
+    player_position: &mut PlayerPosition,
 ) {
     match event {
         WindowEvent::CloseRequested => window_target.exit(),
-        WindowEvent::RedrawRequested => redraw(
-            display,
-            indices,
-            line_indices,
-            program,
-            position_x,
-            position_y,
-            ortho,
-            positon_delta_x,
-            positon_delta_y,
-        ),
+        WindowEvent::RedrawRequested => redraw(display, program, ortho, player_position),
         WindowEvent::KeyboardInput { event, .. } => {
             if event.state != ElementState::Pressed {
                 return;
@@ -106,28 +151,16 @@ fn handle_window_event(
             if let PhysicalKey::Code(keycode) = event.physical_key {
                 match keycode {
                     KeyCode::KeyW => {
-                        *position_y += *positon_delta_y;
-                        *position_x -= *positon_delta_x
+                        player_position.move_up();
                     }
                     KeyCode::KeyS => {
-                        *position_y -= *positon_delta_y;
-                        *position_x += *positon_delta_x
+                        player_position.move_down();
                     }
                     KeyCode::KeyA => {
-                        *angle += 0.1;
-                        if *angle > 2.0 * PI {
-                            *angle -= 2.0 * PI;
-                        }
-                        *positon_delta_x = angle.cos() * 5.0;
-                        *positon_delta_y = angle.sin() * 5.0;
+                        player_position.rotate(Direction::Left);
                     }
                     KeyCode::KeyD => {
-                        *angle -= 0.1;
-                        if *angle < 0.0 {
-                            *angle += 2.0 * PI;
-                        }
-                        *positon_delta_x = angle.cos() * 5.0;
-                        *positon_delta_y = angle.sin() * 5.0;
+                        player_position.rotate(Direction::Right);
                     }
                     _ => (),
                 }
@@ -139,30 +172,24 @@ fn handle_window_event(
 
 fn redraw(
     display: &Display<WindowSurface>,
-    indices: NoIndices,
-    //TODO: Os indices podem ficar estaticos
-    line_indices: NoIndices,
     program: &Program,
-    pos_x: &f32,
-    pos_y: &f32,
     ortho: Mat4,
-    position_delta_x: &mut f32,
-    position_delta_y: &mut f32,
+    player_position: &PlayerPosition,
 ) {
-    let mut player = draw_player(*pos_x, *pos_y);
+    let player_coordinates = &player_position.coordinates;
+
+    let mut player = draw_player(player_coordinates.x, player_coordinates.y);
     let mut map = draw_map();
     map.append(&mut player);
 
+    let camera_line_position = player_position.get_camera_line_position();
     let camera_draw = vec![
         Vertex {
-            position: [*pos_x, *pos_y],
+            position: [player_position.coordinates.x, player_position.coordinates.y],
             color: [0.0, 0.0, 1.0],
         },
         Vertex {
-            position: [
-                *pos_x + *position_delta_x * 5.0,
-                *pos_y + *position_delta_y * 5.0,
-            ],
+            position: [camera_line_position.x, camera_line_position.y],
             color: [0.0, 0.0, 1.0],
         },
     ];
@@ -181,8 +208,8 @@ fn redraw(
     target
         .draw(
             &vertex_buffer,
-            indices,
-            &program,
+            TRIANGLE_INDICES,
+            program,
             &uniforms,
             &Default::default(),
         )
@@ -191,8 +218,8 @@ fn redraw(
     target
         .draw(
             &camera_line_buffer,
-            &line_indices,
-            &program,
+            LINE_INDICES,
+            program,
             &uniforms,
             &Default::default(),
         )

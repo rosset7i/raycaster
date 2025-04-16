@@ -1,8 +1,8 @@
 pub mod errors;
 pub mod window;
 
-pub const VELOCITY_MODIFIER: f32 = 10.0;
 pub const TILE_SIZE: f32 = 100.0;
+pub const VELOCITY_MULTIPLIER: f32 = 5.0;
 
 pub const MAP: [[u8; 10]; 10] = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -12,7 +12,7 @@ pub const MAP: [[u8; 10]; 10] = [
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 0, 0, 0, 1, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
