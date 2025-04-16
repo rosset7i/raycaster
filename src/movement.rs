@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use crate::consts::VELOCITY_MULTIPLIER;
+use crate::consts::{SENSITIVITY_MULTIPLIER, VELOCITY_MULTIPLIER};
 
 #[derive(Default, Debug)]
 pub struct Point {
@@ -53,8 +53,8 @@ impl PlayerPosition {
 
     pub fn rotate(&mut self, direction: Direction) {
         match direction {
-            Direction::Left => self.angle -= 0.1,
-            Direction::Right => self.angle += 0.1,
+            Direction::Left => self.angle -= SENSITIVITY_MULTIPLIER,
+            Direction::Right => self.angle += SENSITIVITY_MULTIPLIER,
         }
 
         if self.angle < 0.0 {
