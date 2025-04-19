@@ -1,7 +1,4 @@
-use std::{
-    collections::HashSet,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use consts::{
     FRAGMENT_SHADER_SRC, VERTEX_SHADER,
@@ -22,7 +19,7 @@ use glium::{
     },
 };
 use movement::{Direction, PlayerPosition, Point};
-use vertexes::{Vertex, draw_map, draw_player};
+use vertexes::{Vertex, draw_map, draw_player, draw_rays};
 
 mod consts;
 mod movement;
@@ -48,8 +45,6 @@ fn main() {
 
     let ortho = Mat4::orthographic_rh_gl(0.0, WIDTH as f32, HEIGHT as f32, 0.0, -1.0, 1.0);
 
-    let mut pressed_keys: HashSet<KeyCode> = HashSet::new();
-
     let mut last_frame = Instant::now();
     #[allow(deprecated)]
     let _ = event_loop.run(move |event, window_target| {
@@ -61,7 +56,6 @@ fn main() {
                 &program,
                 ortho,
                 &mut player_position,
-                &mut pressed_keys,
                 &mut last_frame,
             ),
             Event::AboutToWait => window.request_redraw(),
@@ -77,30 +71,22 @@ fn handle_window_event(
     program: &Program,
     ortho: Mat4,
     player_position: &mut PlayerPosition,
-    pressed_keys: &mut HashSet<KeyCode>,
     last_frame: &mut Instant,
 ) {
     match event {
         WindowEvent::CloseRequested => window_target.exit(),
-        WindowEvent::RedrawRequested => redraw(
-            display,
-            program,
-            ortho,
-            player_position,
-            pressed_keys,
-            last_frame,
-        ),
-        WindowEvent::KeyboardInput { event, .. } => match event.physical_key {
-            PhysicalKey::Code(keycode) => match event.state {
-                ElementState::Pressed => {
-                    pressed_keys.insert(keycode);
+        WindowEvent::RedrawRequested => {
+            redraw(display, program, ortho, player_position, last_frame)
+        }
+        WindowEvent::KeyboardInput { event, .. } => {
+            if let PhysicalKey::Code(keycode) = event.physical_key {
+                if let ElementState::Pressed = event.state {
+                    player_position.pressed_keys.insert(keycode);
+                } else {
+                    player_position.pressed_keys.remove(&keycode);
                 }
-                ElementState::Released => {
-                    pressed_keys.remove(&keycode);
-                }
-            },
-            _ => (),
-        },
+            }
+        }
         _ => (),
     }
 }
@@ -110,7 +96,6 @@ fn redraw(
     program: &Program,
     ortho: Mat4,
     player_position: &mut PlayerPosition,
-    pressed_keys: &mut HashSet<KeyCode>,
     last_frame: &mut Instant,
 ) {
     let now = Instant::now();
@@ -118,7 +103,7 @@ fn redraw(
     if now.duration_since(*last_frame) >= Duration::from_millis(16) {
         *last_frame = now;
 
-        for key in &*pressed_keys {
+        for key in &player_position.pressed_keys.to_owned() {
             match key {
                 KeyCode::KeyW => player_position.move_up(),
                 KeyCode::KeyS => player_position.move_down(),
@@ -146,10 +131,15 @@ fn redraw(
             color: [0.0, 0.0, 1.0],
         },
     ];
+
+    let rays = draw_rays(player_position);
+
     let vertex_buffer =
         VertexBuffer::new(display, &map).unwrap_or_else(|err| panic!("{BUFFER_ERROR} {err}"));
     let camera_line_buffer = VertexBuffer::new(display, &camera_draw)
         .unwrap_or_else(|err| panic!("{BUFFER_ERROR} {err}"));
+    let ray_buffer =
+        VertexBuffer::new(display, &rays).unwrap_or_else(|err| panic!("{BUFFER_ERROR} {err}"));
 
     let mut target = display.draw();
     target.clear_color(0.3, 0.3, 0.3, 1.0);
@@ -171,6 +161,16 @@ fn redraw(
     target
         .draw(
             &camera_line_buffer,
+            LINE_INDICES,
+            program,
+            &uniforms,
+            &Default::default(),
+        )
+        .unwrap();
+
+    target
+        .draw(
+            &ray_buffer,
             LINE_INDICES,
             program,
             &uniforms,

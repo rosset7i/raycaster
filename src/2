@@ -1,0 +1,169 @@
+use std::f32::consts::PI;
+
+use glium::implement_vertex;
+
+use crate::{
+    consts::{EPSILON, MAP, MAP_SIZE, TILE_SIZE},
+    movement::{PlayerPosition, Point},
+};
+
+#[derive(Debug, Copy, Clone)]
+pub struct Vertex {
+    pub position: [f32; 2],
+    pub color: [f32; 3],
+}
+
+implement_vertex!(Vertex, position, color);
+
+pub fn draw_player(x: f32, y: f32) -> Vec<Vertex> {
+    let color = [0.0, 1.0, 0.0];
+
+    let center = Vertex {
+        position: [x, y],
+        color,
+    };
+    let top = Vertex {
+        position: [x, y + 15.0],
+        color,
+    };
+    let right = Vertex {
+        position: [x + 15.0, y],
+        color,
+    };
+    let left = Vertex {
+        position: [x - 15.0, y],
+        color,
+    };
+    let bottom = Vertex {
+        position: [x, y - 15.0],
+        color,
+    };
+
+    vec![
+        center, top, left, center, bottom, left, center, bottom, right, center, top, right, top,
+    ]
+}
+
+fn squarify(x: f32, y: f32) -> Vec<Vertex> {
+    let color = [1.0, 0.0, 0.0];
+
+    let x = x * TILE_SIZE;
+    let y = y * TILE_SIZE;
+
+    let bottom_left = Vertex {
+        position: [x + 1.0, y + 1.0],
+        color,
+    };
+    let top_left = Vertex {
+        position: [x + 1.0, y + TILE_SIZE - 1.0],
+        color,
+    };
+    let top_right = Vertex {
+        position: [x + TILE_SIZE - 1.0, y + TILE_SIZE - 1.0],
+        color,
+    };
+    let bottom_right = Vertex {
+        position: [x + TILE_SIZE - 1.0, y + 1.0],
+        color,
+    };
+
+    vec![
+        bottom_left,
+        top_left,
+        top_right,
+        top_right,
+        bottom_right,
+        bottom_left,
+    ]
+}
+
+pub fn draw_map() -> Vec<Vertex> {
+    MAP.iter()
+        .enumerate()
+        .flat_map(|(y, row)| {
+            row.iter().enumerate().filter_map(move |(x, value)| {
+                if *value != 0 {
+                    Some(squarify(x as f32, y as f32))
+                } else {
+                    None
+                }
+            })
+        })
+        .flatten()
+        .collect()
+}
+
+pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
+    let ray_dir = Point {
+        x: player_position.angle.cos(),
+        y: player_position.angle.sin(),
+    };
+
+    let mut map_x = player_position.coordinates.x.floor() as i32;
+    let mut map_y = player_position.coordinates.y.floor() as i32;
+
+    let delta_dist_x = if ray_dir.x == 0.0 {
+        f32::INFINITY
+    } else {
+        (1.0 / ray_dir.x).abs()
+    };
+    let delta_dist_y = if ray_dir.y == 0.0 {
+        f32::INFINITY
+    } else {
+        (1.0 / ray_dir.y).abs()
+    };
+
+    let step_x: i32;
+    let mut step_y: i32;
+
+    let mut side_dist_x: f32;
+    let mut side_dist_y: f32;
+
+    if ray_dir.x < 0.0 {
+        step_x = -1;
+        side_dist_x = (player_position.coordinates.x - map_x as f32) * delta_dist_x;
+    } else {
+        step_x = 1;
+        side_dist_x = ((map_x + 1) as f32 - player_position.coordinates.x) * delta_dist_x;
+    }
+
+    if ray_dir.y < 0.0 {
+        step_y = -1;
+        side_dist_y = (player_position.coordinates.y - map_y as f32) * delta_dist_y;
+    } else {
+        step_y = 1;
+        side_dist_y = ((map_y + 1) as f32 - player_position.coordinates.y) * delta_dist_y;
+    }
+
+    while (0..MAP_SIZE as i32).contains(&map_x) && (0..MAP_SIZE as i32).contains(&map_y) {
+        if side_dist_x < side_dist_y {
+            side_dist_x += delta_dist_x;
+            map_x += step_x;
+        } else {
+            side_dist_y += delta_dist_y;
+            map_y += step_y;
+        }
+
+        if MAP[map_y as usize][map_x as usize] > 0 {
+            break;
+        }
+    }
+
+    let distance =
+        (map_x as f32 - player_position.coordinates.x + (1.0 - step_x as f32) / 2.0) / ray_dir.x;
+
+    let ray = Vertex {
+        position: [
+            player_position.coordinates.x + ray_dir.x * distance.min(8.0),
+            player_position.coordinates.y + ray_dir.y * distance.min(8.0),
+        ],
+        color: [1.0, 1.0, 0.0],
+    };
+
+    let player_pos = Vertex {
+        position: [player_position.coordinates.x, player_position.coordinates.y],
+        color: [1.0, 1.0, 0.0],
+    };
+
+    return vec![player_pos, ray];
+}

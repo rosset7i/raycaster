@@ -1,11 +1,13 @@
 pub mod errors;
 pub mod window;
 
+pub const EPSILON: f32 = 0.0001;
 pub const TILE_SIZE: f32 = 100.0;
 pub const VELOCITY_MULTIPLIER: f32 = 3.0;
 pub const SENSITIVITY_MULTIPLIER: f32 = 0.05;
+pub const MAP_SIZE: u32 = 10;
 
-pub const MAP: [[u8; 10]; 10] = [
+pub const MAP: [[u32; MAP_SIZE as usize]; MAP_SIZE as usize] = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 1, 1, 0, 0, 0, 1, 0, 1],

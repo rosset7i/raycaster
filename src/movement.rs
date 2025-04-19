@@ -1,4 +1,6 @@
-use std::f32::consts::PI;
+use std::{collections::HashSet, f32::consts::PI};
+
+use glium::winit::keyboard::KeyCode;
 
 use crate::consts::{SENSITIVITY_MULTIPLIER, VELOCITY_MULTIPLIER};
 
@@ -23,11 +25,16 @@ pub enum Direction {
 pub struct PlayerPosition {
     pub coordinates: Point,
     pub angle: f32,
+    pub pressed_keys: HashSet<KeyCode>,
 }
 
 impl PlayerPosition {
     pub fn new(coordinates: Point, angle: f32) -> PlayerPosition {
-        PlayerPosition { coordinates, angle }
+        PlayerPosition {
+            coordinates,
+            angle,
+            pressed_keys: HashSet::new(),
+        }
     }
 
     fn get_deltas(&self) -> Point {
