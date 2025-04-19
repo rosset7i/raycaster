@@ -95,18 +95,26 @@ pub fn draw_map() -> Vec<Vertex> {
 
 pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
     let mut dof: u32 = 0;
+    const DEG_TO_RED: f32 = 0.0174533;
 
     let mut rx: f32 = 0.0;
     let mut ry: f32 = 0.0;
-    let ra: f32 = player_position.angle;
+    let mut ra: f32 = player_position.angle - DEG_TO_RED * 30.0;
 
+    if ra < 0.0 {
+        ra += 2.0 * PI;
+    }
+
+    if ra > 2.0 * PI {
+        ra -= 2.0 * PI;
+    }
     let mut xo: f32 = 0.0;
     let mut yo: f32 = 0.0;
 
     let py: f32 = player_position.coordinates.y;
     let px: f32 = player_position.coordinates.x;
     let mut test: Vec<Vertex> = vec![];
-    for _i in 0..=1 {
+    for _i in 0..=60 {
         dof = 0;
         let mut dis_h: f32 = 1000000.0;
         let mut hx = px;
@@ -141,14 +149,6 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
                 hx = rx;
                 hy = ry;
                 dis_h = dist(px, py, hx, hy, ra);
-                //test.push(Vertex {
-                //    position: [px, py],
-                //    color: [1.0, 1.0, 0.0],
-                //});
-                //test.push(Vertex {
-                //    position: [rx, ry],
-                //    color: [1.0, 1.0, 0.0],
-                //});
             } else {
                 rx += xo;
                 ry += yo;
@@ -193,14 +193,6 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
                 vx = rx;
                 vy = ry;
                 dis_v = dist(px, py, vx, vy, ra);
-                //test.push(Vertex {
-                //    position: [px, py],
-                //    color: [0.0, 1.0, 0.0],
-                //});
-                //test.push(Vertex {
-                //    position: [rx, ry],
-                //    color: [0.0, 1.0, 0.0],
-                //});
             } else {
                 rx += xo;
                 ry += yo;
@@ -224,6 +216,15 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
             position: [rx, ry],
             color: [0.0, 1.0, 0.0],
         });
+
+        ra += DEG_TO_RED;
+        if ra < 0.0 {
+            ra += 2.0 * PI;
+        }
+
+        if ra > 2.0 * PI {
+            ra -= 2.0 * PI;
+        }
     }
 
     test
