@@ -1,8 +1,8 @@
-use std::{collections::HashSet, f32::consts::PI};
+use std::collections::HashSet;
 
 use glium::winit::keyboard::KeyCode;
 
-use crate::consts::{SENSITIVITY_MULTIPLIER, VELOCITY_MULTIPLIER};
+use crate::consts::{COMPLETE_CIRCUNFERENCE, SENSITIVITY_MULTIPLIER, VELOCITY_MULTIPLIER};
 
 #[derive(Default, Debug)]
 pub struct Point {
@@ -26,6 +26,20 @@ pub struct PlayerPosition {
     pub coordinates: Point,
     pub angle: f32,
     pub pressed_keys: HashSet<KeyCode>,
+}
+
+pub trait Angle {
+    fn normalize_as_angle(&mut self);
+}
+
+impl Angle for f32 {
+    fn normalize_as_angle(&mut self) {
+        if *self < 0.0 {
+            *self += COMPLETE_CIRCUNFERENCE;
+        } else if *self > COMPLETE_CIRCUNFERENCE {
+            *self -= COMPLETE_CIRCUNFERENCE;
+        }
+    }
 }
 
 impl PlayerPosition {
@@ -64,19 +78,6 @@ impl PlayerPosition {
             Direction::Right => self.angle += SENSITIVITY_MULTIPLIER,
         }
 
-        if self.angle < 0.0 {
-            self.angle += 2.0 * PI;
-        } else if self.angle > 2.0 * PI {
-            self.angle -= 2.0 * PI;
-        }
-    }
-
-    pub fn get_camera_line_position(&self) -> Point {
-        let deltas = self.get_deltas();
-
-        Point {
-            x: self.coordinates.x + deltas.x * VELOCITY_MULTIPLIER,
-            y: self.coordinates.y + deltas.y * VELOCITY_MULTIPLIER,
-        }
+        self.angle.normalize_as_angle();
     }
 }

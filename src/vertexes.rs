@@ -1,10 +1,11 @@
-use std::f32::consts::PI;
-
 use glium::implement_vertex;
 
 use crate::{
-    consts::{EPSILON, MAP, MAP_SIZE, TILE_SIZE},
-    movement::PlayerPosition,
+    consts::{
+        EPSILON, HALF_CIRCUNFERENCE, MAP, MAP_SIZE, ONE_FORTH_CIRCUNFERENCE,
+        THREE_FORTH_CIRCUNFERENCE, TILE_SIZE,
+    },
+    movement::{Angle, PlayerPosition},
 };
 
 #[derive(Debug, Copy, Clone)]
@@ -94,49 +95,44 @@ pub fn draw_map() -> Vec<Vertex> {
 }
 
 pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
-    let mut dof: u32 = 0;
-    const DEG_TO_RED: f32 = 0.0174533;
+    let player_coordinate_y = player_position.coordinates.y;
+    let player_coordinate_x = player_position.coordinates.x;
+    let mut ray_angle = player_position.angle - 30.0f32.to_radians();
+    ray_angle.normalize_as_angle();
 
     let mut rx: f32 = 0.0;
     let mut ry: f32 = 0.0;
-    let mut ra: f32 = player_position.angle - DEG_TO_RED * 30.0;
-
-    if ra < 0.0 {
-        ra += 2.0 * PI;
-    }
-
-    if ra > 2.0 * PI {
-        ra -= 2.0 * PI;
-    }
     let mut xo: f32 = 0.0;
     let mut yo: f32 = 0.0;
 
-    let py: f32 = player_position.coordinates.y;
-    let px: f32 = player_position.coordinates.x;
-    let mut test: Vec<Vertex> = vec![];
-    for _i in 0..=60 {
-        dof = 0;
-        let mut dis_h: f32 = 1000000.0;
-        let mut hx = px;
-        let mut hy = py;
-        let a_tan: f32 = -1.0 / ra.tan();
-        if ra > PI {
-            ry = (((py / TILE_SIZE).trunc() as i32) * TILE_SIZE as i32) as f32 - EPSILON;
-            rx = (py - ry) * a_tan + px;
-            yo = -TILE_SIZE;
-            xo = -yo * a_tan;
-        }
+    let mut rays: Vec<Vertex> = vec![];
 
-        if ra < PI {
-            ry = (((py / TILE_SIZE).trunc() as i32) * TILE_SIZE as i32) as f32 + TILE_SIZE;
-            rx = (py - ry) * a_tan + px;
+    for _i in 0..60 {
+        let mut dof = 0;
+        let mut dis_h: f32 = 1000000.0;
+        let mut hx = player_coordinate_x;
+        let mut hy = player_coordinate_y;
+        let a_tan: f32 = -1.0 / ray_angle.tan();
+
+        if ray_angle < HALF_CIRCUNFERENCE {
+            ry = (((player_coordinate_y / TILE_SIZE).trunc() as u32) * TILE_SIZE as u32) as f32
+                + TILE_SIZE;
+            rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
             yo = TILE_SIZE;
             xo = -yo * a_tan;
         }
 
-        if ra == 0.0 || ra == PI {
-            rx = px;
-            ry = py;
+        if ray_angle > HALF_CIRCUNFERENCE {
+            ry = (((player_coordinate_y / TILE_SIZE).trunc() as u32) * TILE_SIZE as u32) as f32
+                - EPSILON;
+            rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
+            yo = -TILE_SIZE;
+            xo = -yo * a_tan;
+        }
+
+        if ray_angle == 0.0 || ray_angle == HALF_CIRCUNFERENCE {
+            rx = player_coordinate_x;
+            ry = player_coordinate_y;
             dof = 8;
         }
 
@@ -148,7 +144,7 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
                 dof = 8;
                 hx = rx;
                 hy = ry;
-                dis_h = dist(px, py, hx, hy, ra);
+                dis_h = dist(player_coordinate_x, player_coordinate_y, hx, hy);
             } else {
                 rx += xo;
                 ry += yo;
@@ -157,29 +153,29 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
         }
 
         dof = 0;
-        let p2 = PI / 2.0;
-        let p3 = 3.0 * PI / 2.0;
-        let a_tan: f32 = -ra.tan();
+        let a_tan_neg: f32 = -ray_angle.tan();
         let mut dis_v: f32 = 1000000.0;
-        let mut vx = px;
-        let mut vy = py;
-        if ra > p2 && ra < p3 {
-            rx = (((px / TILE_SIZE).trunc() as i32) * TILE_SIZE as i32) as f32 - EPSILON;
-            ry = (px - rx) * a_tan + py;
+        let mut vx = player_coordinate_x;
+        let mut vy = player_coordinate_y;
+        if (ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
+            rx = (((player_coordinate_x / TILE_SIZE).trunc() as u32) * TILE_SIZE as u32) as f32
+                - EPSILON;
+            ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
             xo = -TILE_SIZE;
-            yo = -xo * a_tan;
+            yo = -xo * a_tan_neg;
         }
 
-        if ra < p2 || ra > p3 {
-            rx = (((px / TILE_SIZE).trunc() as i32) * TILE_SIZE as i32) as f32 + TILE_SIZE;
-            ry = (px - rx) * a_tan + py;
+        if !(ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
+            rx = (((player_coordinate_x / TILE_SIZE).trunc() as u32) * TILE_SIZE as u32) as f32
+                + TILE_SIZE;
+            ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
             xo = TILE_SIZE;
-            yo = -xo * a_tan;
+            yo = -xo * a_tan_neg;
         }
 
-        if ra == 0.0 || ra == PI {
-            rx = px;
-            ry = py;
+        if ray_angle == 0.0 || ray_angle == HALF_CIRCUNFERENCE {
+            rx = player_coordinate_x;
+            ry = player_coordinate_y;
             dof = 8;
         }
 
@@ -192,7 +188,7 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
 
                 vx = rx;
                 vy = ry;
-                dis_v = dist(px, py, vx, vy, ra);
+                dis_v = dist(player_coordinate_x, player_coordinate_y, vx, vy);
             } else {
                 rx += xo;
                 ry += yo;
@@ -200,6 +196,9 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
             }
         }
 
+        //println!(
+        //    "__________________\nPX: {player_coordinate_x}\nPY: {player_coordinate_y}\nRA: {ray_angle}\nRX: {rx}\nRY: {ry}\nXO: {xo}\nYO: {yo}\nHX: {hx}\nHY: {hy}\nATAN: {a_tan}\nATANNEG: {a_tan_neg}"
+        //);
         if dis_v < dis_h {
             rx = vx;
             ry = vy;
@@ -208,28 +207,21 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
             rx = hx;
             ry = hy;
         }
-        test.push(Vertex {
-            position: [px, py],
+        rays.push(Vertex {
+            position: [player_coordinate_x, player_coordinate_y],
             color: [0.0, 1.0, 0.0],
         });
-        test.push(Vertex {
+        rays.push(Vertex {
             position: [rx, ry],
             color: [0.0, 1.0, 0.0],
         });
 
-        ra += DEG_TO_RED;
-        if ra < 0.0 {
-            ra += 2.0 * PI;
-        }
-
-        if ra > 2.0 * PI {
-            ra -= 2.0 * PI;
-        }
+        ray_angle += 1.0f32.to_radians();
+        ray_angle.normalize_as_angle();
     }
-
-    test
+    rays
 }
 
-fn dist(ax: f32, ay: f32, bx: f32, by: f32, ang: f32) -> f32 {
+fn dist(ax: f32, ay: f32, bx: f32, by: f32) -> f32 {
     ((bx - ax) * (bx - ax) + (by - ay) * (by - ay)).sqrt()
 }

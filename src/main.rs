@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use consts::{
-    FRAGMENT_SHADER_SRC, VERTEX_SHADER,
+    FRAGMENT_SHADER_SRC, START_CIRCUNFERENCE, VERTEX_SHADER,
     errors::{BUFFER_ERROR, DRAWING_ERROR, PROGRAM_ERROR, WINDOW_ERROR},
     window::{HEIGHT, WIDTH},
 };
@@ -19,7 +19,7 @@ use glium::{
     },
 };
 use movement::{Direction, PlayerPosition, Point};
-use vertexes::{Vertex, draw_map, draw_player, draw_rays};
+use vertexes::{draw_map, draw_player, draw_rays};
 
 mod consts;
 mod movement;
@@ -30,7 +30,7 @@ static LINE_INDICES: NoIndices = NoIndices(PrimitiveType::LinesList);
 
 fn main() {
     let start_position = Point::from(500.0, 500.0);
-    let mut player_position = PlayerPosition::new(start_position, 0.0);
+    let mut player_position = PlayerPosition::new(start_position, START_CIRCUNFERENCE);
 
     let event_loop = EventLoop::builder()
         .build()
@@ -120,24 +120,10 @@ fn redraw(
     let mut map = draw_map();
     map.append(&mut player);
 
-    let camera_line_position = player_position.get_camera_line_position();
-    let camera_draw = vec![
-        Vertex {
-            position: [player_position.coordinates.x, player_position.coordinates.y],
-            color: [0.0, 0.0, 1.0],
-        },
-        Vertex {
-            position: [camera_line_position.x, camera_line_position.y],
-            color: [0.0, 0.0, 1.0],
-        },
-    ];
-
     let rays = draw_rays(player_position);
 
     let vertex_buffer =
         VertexBuffer::new(display, &map).unwrap_or_else(|err| panic!("{BUFFER_ERROR} {err}"));
-    let camera_line_buffer = VertexBuffer::new(display, &camera_draw)
-        .unwrap_or_else(|err| panic!("{BUFFER_ERROR} {err}"));
     let ray_buffer =
         VertexBuffer::new(display, &rays).unwrap_or_else(|err| panic!("{BUFFER_ERROR} {err}"));
 
@@ -157,16 +143,6 @@ fn redraw(
             &Default::default(),
         )
         .unwrap_or_else(|err| panic!("{DRAWING_ERROR} {err}"));
-
-    target
-        .draw(
-            &camera_line_buffer,
-            LINE_INDICES,
-            program,
-            &uniforms,
-            &Default::default(),
-        )
-        .unwrap();
 
     target
         .draw(

@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 pub mod errors;
 pub mod window;
 
@@ -6,6 +8,12 @@ pub const TILE_SIZE: f32 = 100.0;
 pub const VELOCITY_MULTIPLIER: f32 = 3.0;
 pub const SENSITIVITY_MULTIPLIER: f32 = 0.05;
 pub const MAP_SIZE: u32 = 10;
+
+pub const COMPLETE_CIRCUNFERENCE: f32 = PI * 2.0;
+pub const START_CIRCUNFERENCE: f32 = 0.0;
+pub const ONE_FORTH_CIRCUNFERENCE: f32 = PI / 2.0;
+pub const HALF_CIRCUNFERENCE: f32 = PI;
+pub const THREE_FORTH_CIRCUNFERENCE: f32 = 3.0 * PI / 2.0;
 
 pub const MAP: [[u32; MAP_SIZE as usize]; MAP_SIZE as usize] = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
