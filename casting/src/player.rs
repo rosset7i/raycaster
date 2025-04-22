@@ -1,10 +1,8 @@
-use std::collections::HashSet;
+use crate::math::Angle;
 
-use glium::winit::keyboard::KeyCode;
+pub const VELOCITY_MULTIPLIER: f32 = 3.0;
+pub const SENSITIVITY_MULTIPLIER: f32 = 0.05;
 
-use crate::consts::{COMPLETE_CIRCUNFERENCE, SENSITIVITY_MULTIPLIER, VELOCITY_MULTIPLIER};
-
-#[derive(Default, Debug)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -21,34 +19,14 @@ pub enum Direction {
     Right,
 }
 
-#[derive(Default)]
 pub struct PlayerPosition {
     pub coordinates: Point,
     pub angle: f32,
-    pub pressed_keys: HashSet<KeyCode>,
-}
-
-pub trait Angle {
-    fn normalize_as_angle(&mut self);
-}
-
-impl Angle for f32 {
-    fn normalize_as_angle(&mut self) {
-        if *self < 0.0 {
-            *self += COMPLETE_CIRCUNFERENCE;
-        } else if *self > COMPLETE_CIRCUNFERENCE {
-            *self -= COMPLETE_CIRCUNFERENCE;
-        }
-    }
 }
 
 impl PlayerPosition {
     pub fn new(coordinates: Point, angle: f32) -> PlayerPosition {
-        PlayerPosition {
-            coordinates,
-            angle,
-            pressed_keys: HashSet::new(),
-        }
+        PlayerPosition { coordinates, angle }
     }
 
     fn get_deltas(&self) -> Point {

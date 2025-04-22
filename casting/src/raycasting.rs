@@ -1,20 +1,17 @@
-use glium::implement_vertex;
-
 use crate::{
-    consts::{
-        EPSILON, HALF_CIRCUNFERENCE, MAP, MAP_SIZE, ONE_FORTH_CIRCUNFERENCE,
-        THREE_FORTH_CIRCUNFERENCE, TILE_SIZE,
-    },
-    movement::{Angle, PlayerPosition},
+    consts::EPSILON,
+    map::Map,
+    math::{Angle, HALF_CIRCUNFERENCE, ONE_FORTH_CIRCUNFERENCE, THREE_FORTH_CIRCUNFERENCE},
+    player::PlayerPosition,
 };
+
+pub const DEPTH_OF_FIELD: u32 = 10;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Vertex {
     pub position: [f32; 2],
     pub color: [f32; 3],
 }
-
-implement_vertex!(Vertex, position, color);
 
 pub fn draw_player(x: f32, y: f32) -> Vec<Vertex> {
     let color = [0.0, 1.0, 0.0];
@@ -45,26 +42,26 @@ pub fn draw_player(x: f32, y: f32) -> Vec<Vertex> {
     ]
 }
 
-fn squarify(x: f32, y: f32) -> Vec<Vertex> {
+fn squarify(x: f32, y: f32, x_size: f32, y_size: f32) -> Vec<Vertex> {
     let color = [1.0, 0.0, 0.0];
 
-    let x = x * TILE_SIZE;
-    let y = y * TILE_SIZE;
+    let x = x * x_size;
+    let y = y * y_size;
 
     let bottom_left = Vertex {
         position: [x + 1.0, y + 1.0],
         color,
     };
     let top_left = Vertex {
-        position: [x + 1.0, y + TILE_SIZE - 1.0],
+        position: [x + 1.0, y + y_size - 1.0],
         color,
     };
     let top_right = Vertex {
-        position: [x + TILE_SIZE - 1.0, y + TILE_SIZE - 1.0],
+        position: [x + x_size - 1.0, y + y_size - 1.0],
         color,
     };
     let bottom_right = Vertex {
-        position: [x + TILE_SIZE - 1.0, y + 1.0],
+        position: [x + x_size - 1.0, y + 1.0],
         color,
     };
 
@@ -78,13 +75,16 @@ fn squarify(x: f32, y: f32) -> Vec<Vertex> {
     ]
 }
 
-pub fn draw_map() -> Vec<Vertex> {
-    MAP.iter()
+pub fn draw_map(map: &Map) -> Vec<Vertex> {
+    let (x_size, y_size) = map.get_tile_size();
+
+    map.tiles
+        .iter()
         .enumerate()
         .flat_map(|(y, row)| {
             row.iter().enumerate().filter_map(move |(x, value)| {
                 if *value != 0 {
-                    Some(squarify(x as f32, y as f32))
+                    Some(squarify(x as f32, y as f32, x_size, y_size))
                 } else {
                     None
                 }
@@ -94,7 +94,9 @@ pub fn draw_map() -> Vec<Vertex> {
         .collect()
 }
 
-pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
+pub fn draw_rays(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
+    let (x_size, y_size) = map.get_tile_size();
+
     let player_coordinate_y = player_position.coordinates.y;
     let player_coordinate_x = player_position.coordinates.x;
     let mut ray_angle = player_position.angle - 30.0f32.to_radians();
@@ -115,33 +117,31 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
         let a_tan: f32 = -1.0 / ray_angle.tan();
 
         if ray_angle < HALF_CIRCUNFERENCE {
-            ry = (((player_coordinate_y / TILE_SIZE).trunc() as u32) * TILE_SIZE as u32) as f32
-                + TILE_SIZE;
+            ry = (((player_coordinate_y / y_size).trunc() as u32) * y_size as u32) as f32 + y_size;
             rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
-            yo = TILE_SIZE;
+            yo = y_size;
             xo = -yo * a_tan;
         }
 
         if ray_angle > HALF_CIRCUNFERENCE {
-            ry = (((player_coordinate_y / TILE_SIZE).trunc() as u32) * TILE_SIZE as u32) as f32
-                - EPSILON;
+            ry = (((player_coordinate_y / y_size).trunc() as u32) * y_size as u32) as f32 - EPSILON;
             rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
-            yo = -TILE_SIZE;
+            yo = -y_size;
             xo = -yo * a_tan;
         }
 
         if ray_angle == 0.0 || ray_angle == HALF_CIRCUNFERENCE {
             rx = player_coordinate_x;
             ry = player_coordinate_y;
-            dof = 8;
+            dof = DEPTH_OF_FIELD;
         }
 
-        while dof < 8 {
-            let mx = (rx / TILE_SIZE).floor() as u32;
-            let my = (ry / TILE_SIZE).floor() as u32;
+        while dof < DEPTH_OF_FIELD {
+            let mx = (rx / x_size).floor() as u32;
+            let my = (ry / y_size).floor() as u32;
 
-            if mx < MAP_SIZE && my < MAP_SIZE && MAP[my as usize][mx as usize] == 1 {
-                dof = 8;
+            if mx < map.length_x && my < map.length_y && map.tiles[my as usize][mx as usize] == 1 {
+                dof = DEPTH_OF_FIELD;
                 hx = rx;
                 hy = ry;
                 dis_h = dist(player_coordinate_x, player_coordinate_y, hx, hy);
@@ -158,33 +158,31 @@ pub fn draw_rays(player_position: &PlayerPosition) -> Vec<Vertex> {
         let mut vx = player_coordinate_x;
         let mut vy = player_coordinate_y;
         if (ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
-            rx = (((player_coordinate_x / TILE_SIZE).trunc() as u32) * TILE_SIZE as u32) as f32
-                - EPSILON;
+            rx = (((player_coordinate_x / x_size).trunc() as u32) * x_size as u32) as f32 - EPSILON;
             ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
-            xo = -TILE_SIZE;
+            xo = -x_size;
             yo = -xo * a_tan_neg;
         }
 
         if !(ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
-            rx = (((player_coordinate_x / TILE_SIZE).trunc() as u32) * TILE_SIZE as u32) as f32
-                + TILE_SIZE;
+            rx = (((player_coordinate_x / x_size).trunc() as u32) * x_size as u32) as f32 + x_size;
             ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
-            xo = TILE_SIZE;
+            xo = x_size;
             yo = -xo * a_tan_neg;
         }
 
         if ray_angle == 0.0 || ray_angle == HALF_CIRCUNFERENCE {
             rx = player_coordinate_x;
             ry = player_coordinate_y;
-            dof = 8;
+            dof = DEPTH_OF_FIELD;
         }
 
-        while dof < 8 {
-            let mx = (rx / TILE_SIZE).floor() as u32;
-            let my = (ry / TILE_SIZE).floor() as u32;
+        while dof < DEPTH_OF_FIELD {
+            let mx = (rx / x_size).floor() as u32;
+            let my = (ry / y_size).floor() as u32;
 
-            if mx < MAP_SIZE && my < MAP_SIZE && MAP[my as usize][mx as usize] == 1 {
-                dof = 8;
+            if mx < map.length_x && my < map.length_y && map.tiles[my as usize][mx as usize] == 1 {
+                dof = DEPTH_OF_FIELD;
 
                 vx = rx;
                 vy = ry;
