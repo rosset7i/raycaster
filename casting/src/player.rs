@@ -1,8 +1,8 @@
-use std::f32::consts::PI;
+use crate::math::Angle;
 
-use crate::consts::VELOCITY_MULTIPLIER;
+pub const VELOCITY_MULTIPLIER: f32 = 3.0;
+pub const SENSITIVITY_MULTIPLIER: f32 = 0.05;
 
-#[derive(Default, Debug)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -19,7 +19,6 @@ pub enum Direction {
     Right,
 }
 
-#[derive(Default)]
 pub struct PlayerPosition {
     pub coordinates: Point,
     pub angle: f32,
@@ -53,23 +52,10 @@ impl PlayerPosition {
 
     pub fn rotate(&mut self, direction: Direction) {
         match direction {
-            Direction::Left => self.angle -= 0.1,
-            Direction::Right => self.angle += 0.1,
+            Direction::Left => self.angle -= SENSITIVITY_MULTIPLIER,
+            Direction::Right => self.angle += SENSITIVITY_MULTIPLIER,
         }
 
-        if self.angle < 0.0 {
-            self.angle += 2.0 * PI;
-        } else if self.angle > 2.0 * PI {
-            self.angle -= 2.0 * PI;
-        }
-    }
-
-    pub fn get_camera_line_position(&self) -> Point {
-        let deltas = self.get_deltas();
-
-        Point {
-            x: self.coordinates.x + deltas.x * VELOCITY_MULTIPLIER,
-            y: self.coordinates.y + deltas.y * VELOCITY_MULTIPLIER,
-        }
+        self.angle.normalize_as_angle();
     }
 }
