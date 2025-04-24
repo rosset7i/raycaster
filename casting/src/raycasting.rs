@@ -1,10 +1,10 @@
 use crate::{
-    consts::EPSILON,
     map::Map,
     math::{Angle, HALF_CIRCUNFERENCE, ONE_FORTH_CIRCUNFERENCE, THREE_FORTH_CIRCUNFERENCE},
     player::PlayerPosition,
 };
 
+pub const OFFSET: f32 = 0.0001;
 pub const DEPTH_OF_FIELD: u32 = 10;
 
 #[derive(Debug, Copy, Clone)]
@@ -110,6 +110,7 @@ pub fn draw_rays(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
     let mut rays: Vec<Vertex> = vec![];
 
     for _i in 0..60 {
+        //VERTICAL
         let mut dof = 0;
         let mut dis_h: f32 = 1000000.0;
         let mut hx = player_coordinate_x;
@@ -117,14 +118,14 @@ pub fn draw_rays(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
         let a_tan: f32 = -1.0 / ray_angle.tan();
 
         if ray_angle < HALF_CIRCUNFERENCE {
-            ry = (((player_coordinate_y / y_size).trunc() as u32) * y_size as u32) as f32 + y_size;
+            ry = ((player_coordinate_y / y_size).trunc() * y_size) + y_size + OFFSET;
             rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
             yo = y_size;
             xo = -yo * a_tan;
         }
 
         if ray_angle > HALF_CIRCUNFERENCE {
-            ry = (((player_coordinate_y / y_size).trunc() as u32) * y_size as u32) as f32 - EPSILON;
+            ry = ((player_coordinate_y / y_size).trunc() * y_size) - OFFSET;
             rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
             yo = -y_size;
             xo = -yo * a_tan;
@@ -158,14 +159,14 @@ pub fn draw_rays(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
         let mut vx = player_coordinate_x;
         let mut vy = player_coordinate_y;
         if (ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
-            rx = (((player_coordinate_x / x_size).trunc() as u32) * x_size as u32) as f32 - EPSILON;
+            rx = ((player_coordinate_x / x_size).trunc() * x_size) - OFFSET;
             ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
             xo = -x_size;
             yo = -xo * a_tan_neg;
         }
 
         if !(ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
-            rx = (((player_coordinate_x / x_size).trunc() as u32) * x_size as u32) as f32 + x_size;
+            rx = ((player_coordinate_x / x_size).trunc() * x_size) + x_size + OFFSET;
             ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
             xo = x_size;
             yo = -xo * a_tan_neg;
@@ -194,9 +195,6 @@ pub fn draw_rays(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
             }
         }
 
-        //println!(
-        //    "__________________\nPX: {player_coordinate_x}\nPY: {player_coordinate_y}\nRA: {ray_angle}\nRX: {rx}\nRY: {ry}\nXO: {xo}\nYO: {yo}\nHX: {hx}\nHY: {hy}\nATAN: {a_tan}\nATANNEG: {a_tan_neg}"
-        //);
         if dis_v < dis_h {
             rx = vx;
             ry = vy;

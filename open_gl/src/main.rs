@@ -145,20 +145,21 @@ fn redraw(
 ) {
     let now = Instant::now();
 
-    if now.duration_since(*last_frame) >= Duration::from_millis(16) {
-        *last_frame = now;
-
-        for key in pressed_keys.iter() {
-            match key {
-                KeyCode::KeyW => player_position.move_up(),
-                KeyCode::KeyS => player_position.move_down(),
-                KeyCode::KeyA => player_position.rotate(Direction::Left),
-                KeyCode::KeyD => player_position.rotate(Direction::Right),
-                _ => (),
-            }
-        }
+    if now.duration_since(*last_frame) < Duration::from_millis(16) {
+        return;
     }
 
+    *last_frame = now;
+
+    for key in pressed_keys.iter() {
+        match key {
+            KeyCode::KeyW => player_position.move_up(),
+            KeyCode::KeyS => player_position.move_down(),
+            KeyCode::KeyA => player_position.rotate(Direction::Left),
+            KeyCode::KeyD => player_position.rotate(Direction::Right),
+            _ => (),
+        }
+    }
     let player_coordinates = &player_position.coordinates;
 
     let map = Map::new();
