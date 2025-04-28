@@ -3,16 +3,18 @@ use std::{
     time::{Duration, Instant},
 };
 
+use canva::{get_map_buffer, get_player_buffer, get_rays_buffer};
 use casting::{
     consts::{WINDOW_HEIGHT, WINDOW_WIDTH},
     map::Map,
     math::START_CIRCUNFERENCE,
     player::{Direction, PlayerPosition, Point},
-    raycasting::{Vertex, draw_map, draw_player, draw_rays},
+    raycasting::{
+        Vertex, get_map_vertex_coordinates, get_player_vertex_coordinates,
+        get_ray_vertex_coordinates,
+    },
 };
-use consts::{
-    BUFFER_ERROR, DRAWING_ERROR, FRAGMENT_SHADER_SRC, PROGRAM_ERROR, VERTEX_SHADER, WINDOW_ERROR,
-};
+use consts::{DRAWING_ERROR, FRAGMENT_SHADER_SRC, PROGRAM_ERROR, VERTEX_SHADER, WINDOW_ERROR};
 use glam::Mat4;
 use glium::{
     Display, Program, Surface, VertexBuffer,
@@ -21,6 +23,7 @@ use glium::{
     implement_vertex,
     index::{NoIndices, PrimitiveType},
     uniform,
+    uniforms::{EmptyUniforms, UniformsStorage},
     winit::{
         event::{ElementState, Event, WindowEvent},
         event_loop::{ActiveEventLoop, EventLoop},
@@ -28,6 +31,7 @@ use glium::{
     },
 };
 
+mod canva;
 mod consts;
 
 static TRIANGLE_INDICES: NoIndices = NoIndices(PrimitiveType::TrianglesList);
@@ -80,6 +84,19 @@ fn main() {
         1.0,
     );
 
+    let map = Map::new();
+
+    let uniforms = uniform! {
+        matrix: ortho.to_cols_array_2d()
+    };
+
+    let map_buffer = get_map_buffer(&display, get_map_vertex_coordinates(&map));
+    let player_buffer = get_player_buffer(
+        &display,
+        get_player_vertex_coordinates(player_position.coordinates.x, player_position.coordinates.y),
+    );
+    let rays_buffer = get_rays_buffer(&display, get_ray_vertex_coordinates(&player_position, &map));
+
     let mut last_frame = Instant::now();
     let mut pressed_keys: HashSet<KeyCode> = HashSet::new();
 
@@ -91,10 +108,14 @@ fn main() {
                 window_target,
                 &display,
                 &program,
-                ortho,
+                &uniforms,
                 &mut player_position,
                 &mut last_frame,
                 &mut pressed_keys,
+                &map_buffer,
+                &rays_buffer,
+                &player_buffer,
+                &map,
             ),
             Event::AboutToWait => window.request_redraw(),
             _ => (),
@@ -107,20 +128,28 @@ fn handle_window_event(
     window_target: &ActiveEventLoop,
     display: &Display<WindowSurface>,
     program: &Program,
-    ortho: Mat4,
+    uniforms: &UniformsStorage<'_, [[f32; 4]; 4], EmptyUniforms>,
     player_position: &mut PlayerPosition,
     last_frame: &mut Instant,
     pressed_keys: &mut HashSet<KeyCode>,
+    map_buffer: &VertexBuffer<GpuVertex>,
+    rays_buffer: &VertexBuffer<GpuVertex>,
+    player_buffer: &VertexBuffer<GpuVertex>,
+    map: &Map,
 ) {
     match event {
         WindowEvent::CloseRequested => window_target.exit(),
         WindowEvent::RedrawRequested => redraw(
             display,
             program,
-            ortho,
+            uniforms,
             player_position,
             last_frame,
             pressed_keys,
+            map_buffer,
+            rays_buffer,
+            player_buffer,
+            map,
         ),
         WindowEvent::KeyboardInput { event, .. } => {
             if let PhysicalKey::Code(keycode) = event.physical_key {
@@ -138,10 +167,14 @@ fn handle_window_event(
 fn redraw(
     display: &Display<WindowSurface>,
     program: &Program,
-    ortho: Mat4,
+    uniforms: &UniformsStorage<'_, [[f32; 4]; 4], EmptyUniforms>,
     player_position: &mut PlayerPosition,
     last_frame: &mut Instant,
     pressed_keys: &mut HashSet<KeyCode>,
+    map_buffer: &VertexBuffer<GpuVertex>,
+    rays_buffer: &VertexBuffer<GpuVertex>,
+    player_buffer: &VertexBuffer<GpuVertex>,
+    map: &Map,
 ) {
     let now = Instant::now();
 
@@ -160,44 +193,44 @@ fn redraw(
             _ => (),
         }
     }
+
     let player_coordinates = &player_position.coordinates;
 
-    let map = Map::new();
+    let player_vertex_coordinates =
+        get_player_vertex_coordinates(player_coordinates.x, player_coordinates.y);
+    player_buffer.write(player_vertex_coordinates.as_gpu_vertex().as_slice());
 
-    let mut player = draw_player(player_coordinates.x, player_coordinates.y);
-    let mut map_vertex = draw_map(&map);
-    map_vertex.append(&mut player);
-
-    let rays = draw_rays(player_position, &map);
-
-    let vertex_buffer = VertexBuffer::new(display, &map_vertex.as_gpu_vertex())
-        .unwrap_or_else(|err| panic!("{BUFFER_ERROR} {err}"));
-    let ray_buffer = VertexBuffer::new(display, &rays.as_gpu_vertex())
-        .unwrap_or_else(|err| panic!("{BUFFER_ERROR} {err}"));
+    let rays_vertex_coordinates = get_ray_vertex_coordinates(&player_position, map);
+    rays_buffer.write(rays_vertex_coordinates.as_gpu_vertex().as_slice());
 
     let mut target = display.draw();
     target.clear_color(0.3, 0.3, 0.3, 1.0);
-
-    let uniforms = uniform! {
-        matrix: ortho.to_cols_array_2d()
-    };
-
     target
         .draw(
-            &vertex_buffer,
+            map_buffer,
             TRIANGLE_INDICES,
             program,
-            &uniforms,
+            uniforms,
             &Default::default(),
         )
         .unwrap_or_else(|err| panic!("{DRAWING_ERROR} {err}"));
 
     target
         .draw(
-            &ray_buffer,
+            player_buffer,
+            TRIANGLE_INDICES,
+            program,
+            uniforms,
+            &Default::default(),
+        )
+        .unwrap();
+
+    target
+        .draw(
+            rays_buffer,
             LINE_INDICES,
             program,
-            &uniforms,
+            uniforms,
             &Default::default(),
         )
         .unwrap();

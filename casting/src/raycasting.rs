@@ -13,7 +13,7 @@ pub struct Vertex {
     pub color: [f32; 3],
 }
 
-pub fn draw_player(x: f32, y: f32) -> Vec<Vertex> {
+pub fn get_player_vertex_coordinates(x: f32, y: f32) -> Vec<Vertex> {
     let color = [0.0, 1.0, 0.0];
 
     let center = Vertex {
@@ -42,40 +42,7 @@ pub fn draw_player(x: f32, y: f32) -> Vec<Vertex> {
     ]
 }
 
-fn squarify(x: f32, y: f32, x_size: f32, y_size: f32) -> Vec<Vertex> {
-    let color = [1.0, 0.0, 0.0];
-
-    let x = x * x_size;
-    let y = y * y_size;
-
-    let bottom_left = Vertex {
-        position: [x + 1.0, y + 1.0],
-        color,
-    };
-    let top_left = Vertex {
-        position: [x + 1.0, y + y_size - 1.0],
-        color,
-    };
-    let top_right = Vertex {
-        position: [x + x_size - 1.0, y + y_size - 1.0],
-        color,
-    };
-    let bottom_right = Vertex {
-        position: [x + x_size - 1.0, y + 1.0],
-        color,
-    };
-
-    vec![
-        bottom_left,
-        top_left,
-        top_right,
-        top_right,
-        bottom_right,
-        bottom_left,
-    ]
-}
-
-pub fn draw_map(map: &Map) -> Vec<Vertex> {
+pub fn get_map_vertex_coordinates(map: &Map) -> Vec<Vertex> {
     let (x_size, y_size) = map.get_tile_size();
 
     map.tiles
@@ -84,7 +51,7 @@ pub fn draw_map(map: &Map) -> Vec<Vertex> {
         .flat_map(|(y, row)| {
             row.iter().enumerate().filter_map(move |(x, value)| {
                 if *value != 0 {
-                    Some(squarify(x as f32, y as f32, x_size, y_size))
+                    Some(get_tile(x as f32, y as f32, x_size, y_size))
                 } else {
                     None
                 }
@@ -94,7 +61,7 @@ pub fn draw_map(map: &Map) -> Vec<Vertex> {
         .collect()
 }
 
-pub fn draw_rays(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
+pub fn get_ray_vertex_coordinates(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
     let (x_size, y_size) = map.get_tile_size();
 
     let player_coordinate_y = player_position.coordinates.y;
@@ -220,4 +187,37 @@ pub fn draw_rays(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
 
 fn dist(ax: f32, ay: f32, bx: f32, by: f32) -> f32 {
     ((bx - ax) * (bx - ax) + (by - ay) * (by - ay)).sqrt()
+}
+
+fn get_tile(x: f32, y: f32, x_size: f32, y_size: f32) -> Vec<Vertex> {
+    let color = [1.0, 0.0, 0.0];
+
+    let x = x * x_size;
+    let y = y * y_size;
+
+    let bottom_left = Vertex {
+        position: [x + 1.0, y + 1.0],
+        color,
+    };
+    let top_left = Vertex {
+        position: [x + 1.0, y + y_size - 1.0],
+        color,
+    };
+    let top_right = Vertex {
+        position: [x + x_size - 1.0, y + y_size - 1.0],
+        color,
+    };
+    let bottom_right = Vertex {
+        position: [x + x_size - 1.0, y + 1.0],
+        color,
+    };
+
+    vec![
+        bottom_left,
+        top_left,
+        top_right,
+        top_right,
+        bottom_right,
+        bottom_left,
+    ]
 }
