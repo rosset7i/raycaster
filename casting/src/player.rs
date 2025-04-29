@@ -1,8 +1,9 @@
 use crate::math::Angle;
 
-pub const VELOCITY_MULTIPLIER: f32 = 3.0;
-pub const SENSITIVITY_MULTIPLIER: f32 = 0.05;
+pub const VELOCITY_MULTIPLIER: f32 = 1.5;
+pub const SENSITIVITY_MULTIPLIER: f32 = 0.03;
 
+#[derive(Default)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -19,6 +20,7 @@ pub enum Direction {
     Right,
 }
 
+#[derive(Default)]
 pub struct PlayerPosition {
     pub coordinates: Point,
     pub angle: f32,

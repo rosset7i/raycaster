@@ -13,7 +13,10 @@ pub struct Vertex {
     pub color: [f32; 3],
 }
 
-pub fn get_player_vertex_coordinates(x: f32, y: f32) -> Vec<Vertex> {
+pub fn get_player_vertices(player_position: &PlayerPosition) -> Vec<Vertex> {
+    let x = player_position.coordinates.x;
+    let y = player_position.coordinates.y;
+
     let color = [0.0, 1.0, 0.0];
 
     let center = Vertex {
@@ -42,7 +45,7 @@ pub fn get_player_vertex_coordinates(x: f32, y: f32) -> Vec<Vertex> {
     ]
 }
 
-pub fn get_map_vertex_coordinates(map: &Map) -> Vec<Vertex> {
+pub fn get_map_vertices(map: &Map) -> Vec<Vertex> {
     let (x_size, y_size) = map.get_tile_size();
 
     map.tiles
@@ -61,7 +64,7 @@ pub fn get_map_vertex_coordinates(map: &Map) -> Vec<Vertex> {
         .collect()
 }
 
-pub fn get_ray_vertex_coordinates(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
+pub fn get_ray_vertices(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
     let (x_size, y_size) = map.get_tile_size();
 
     let player_coordinate_y = player_position.coordinates.y;
