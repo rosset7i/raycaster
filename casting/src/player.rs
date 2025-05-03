@@ -1,6 +1,6 @@
 use crate::math::Angle;
 
-pub const VELOCITY_MULTIPLIER: f32 = 1.5;
+pub const VELOCITY_MULTIPLIER: f32 = 2.5;
 pub const SENSITIVITY_MULTIPLIER: f32 = 0.03;
 
 #[derive(Default)]

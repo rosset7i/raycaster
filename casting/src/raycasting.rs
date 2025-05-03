@@ -54,9 +54,21 @@ pub fn get_map_vertices(map: &Map) -> Vec<Vertex> {
         .flat_map(|(y, row)| {
             row.iter().enumerate().filter_map(move |(x, value)| {
                 if *value != 0 {
-                    Some(get_tile(x as f32, y as f32, x_size, y_size))
+                    Some(get_tile(
+                        x as f32,
+                        y as f32,
+                        x_size,
+                        y_size,
+                        [1.0, 0.0, 0.0],
+                    ))
                 } else {
-                    None
+                    Some(get_tile(
+                        x as f32,
+                        y as f32,
+                        x_size,
+                        y_size,
+                        [0.3, 0.3, 0.3],
+                    ))
                 }
             })
         })
@@ -192,8 +204,8 @@ fn dist(ax: f32, ay: f32, bx: f32, by: f32) -> f32 {
     ((bx - ax) * (bx - ax) + (by - ay) * (by - ay)).sqrt()
 }
 
-fn get_tile(x: f32, y: f32, x_size: f32, y_size: f32) -> Vec<Vertex> {
-    let color = [1.0, 0.0, 0.0];
+fn get_tile(x: f32, y: f32, x_size: f32, y_size: f32, color: [f32; 3]) -> Vec<Vertex> {
+    let color = color;
 
     let x = x * x_size;
     let y = y * y_size;

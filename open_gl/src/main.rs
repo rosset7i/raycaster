@@ -45,6 +45,7 @@ fn main() {
 
     let (window, display) = SimpleWindowBuilder::new()
         .with_inner_size(WINDOW_WIDTH, WINDOW_HEIGHT)
+        .with_title("Raycaster")
         .build(&event_loop);
 
     let program = Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER_SRC, None)
