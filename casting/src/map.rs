@@ -30,7 +30,7 @@ impl Default for Map {
 impl Map {
     pub fn new() -> Map {
         Map {
-            tiles: MAP.into_iter().map(|x| x.to_vec()).collect(),
+            tiles: MAP.into_iter().rev().map(|x| x.to_vec()).collect(),
             length_x: MAP[0].len() as u32,
             length_y: MAP.len() as u32,
         }

@@ -57,8 +57,8 @@ fn main() {
         matrix: Mat4::orthographic_rh_gl(
             0.0,
             WINDOW_WIDTH as f32,
-            WINDOW_HEIGHT as f32,
             0.0,
+            WINDOW_HEIGHT as f32,
             -1.0,
             1.0,
         ).to_cols_array_2d()

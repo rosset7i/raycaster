@@ -54,8 +54,8 @@ impl PlayerPosition {
 
     pub fn rotate(&mut self, direction: Direction) {
         match direction {
-            Direction::Left => self.angle -= SENSITIVITY_MULTIPLIER,
-            Direction::Right => self.angle += SENSITIVITY_MULTIPLIER,
+            Direction::Left => self.angle += SENSITIVITY_MULTIPLIER,
+            Direction::Right => self.angle -= SENSITIVITY_MULTIPLIER,
         }
 
         self.angle.normalize_as_angle();
