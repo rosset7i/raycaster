@@ -77,126 +77,42 @@ pub fn get_map_vertices(map: &Map) -> Vec<Vertex> {
 }
 
 pub fn get_ray_vertices(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
-    let (x_size, y_size) = map.get_tile_size();
-
-    let player_coordinate_y = player_position.coordinates.y;
-    let player_coordinate_x = player_position.coordinates.x;
-    let mut ray_angle = player_position.angle - 30.0f32.to_radians();
-    ray_angle.normalize_as_angle();
-
-    let mut rx: f32 = 0.0;
-    let mut ry: f32 = 0.0;
-    let mut xo: f32 = 0.0;
-    let mut yo: f32 = 0.0;
-
     let mut rays: Vec<Vertex> = vec![];
 
-    for _i in 0..60 {
-        //VERTICAL
-        let mut dof = 0;
-        let mut dis_h: f32 = 1000000.0;
-        let mut hx = player_coordinate_x;
-        let mut hy = player_coordinate_y;
-        let a_tan: f32 = -1.0 / ray_angle.tan();
+    let (tile_size_x, tile_size_y) = map.get_tile_size();
+    let ray_start_x = player_position.coordinates.x;
+    let ray_start_y = player_position.coordinates.y;
+    let mut ray_angle = player_position.angle;
+    ray_angle.normalize_as_angle();
 
-        if ray_angle < HALF_CIRCUNFERENCE {
-            ry = ((player_coordinate_y / y_size).trunc() * y_size) + y_size + OFFSET;
-            rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
-            yo = y_size;
-            xo = -yo * a_tan;
-        }
+    let direction_x = ray_angle.cos();
+    let direction_y = ray_angle.sin();
 
-        if ray_angle > HALF_CIRCUNFERENCE {
-            ry = ((player_coordinate_y / y_size).trunc() * y_size) - OFFSET;
-            rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
-            yo = -y_size;
-            xo = -yo * a_tan;
-        }
+    let current_tile_x = (ray_start_x / tile_size_x).floor();
+    let current_tile_y = (ray_start_y / tile_size_y).floor();
 
-        if ray_angle == 0.0 || ray_angle == HALF_CIRCUNFERENCE {
-            rx = player_coordinate_x;
-            ry = player_coordinate_y;
-            dof = DEPTH_OF_FIELD;
-        }
+    let next_tile_x: f32 = if direction_x > 0.0 {
+        (current_tile_x + 1.0) * tile_size_x
+    } else {
+        current_tile_x * tile_size_x
+    };
 
-        while dof < DEPTH_OF_FIELD {
-            let mx = (rx / x_size).floor() as u32;
-            let my = (ry / y_size).floor() as u32;
+    let next_tile_y: f32 = if direction_y > 0.0 {
+        (current_tile_y + 1.0) * tile_size_y
+    } else {
+        current_tile_y * tile_size_y
+    };
 
-            if mx < map.length_x && my < map.length_y && map.tiles[my as usize][mx as usize] == 1 {
-                dof = DEPTH_OF_FIELD;
-                hx = rx;
-                hy = ry;
-                dis_h = dist(player_coordinate_x, player_coordinate_y, hx, hy);
-            } else {
-                rx += xo;
-                ry += yo;
-                dof += 1;
-            }
-        }
-
-        dof = 0;
-        let a_tan_neg: f32 = -ray_angle.tan();
-        let mut dis_v: f32 = 1000000.0;
-        let mut vx = player_coordinate_x;
-        let mut vy = player_coordinate_y;
-        if (ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
-            rx = ((player_coordinate_x / x_size).trunc() * x_size) - OFFSET;
-            ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
-            xo = -x_size;
-            yo = -xo * a_tan_neg;
-        }
-
-        if !(ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
-            rx = ((player_coordinate_x / x_size).trunc() * x_size) + x_size + OFFSET;
-            ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
-            xo = x_size;
-            yo = -xo * a_tan_neg;
-        }
-
-        if ray_angle == 0.0 || ray_angle == HALF_CIRCUNFERENCE {
-            rx = player_coordinate_x;
-            ry = player_coordinate_y;
-            dof = DEPTH_OF_FIELD;
-        }
-
-        while dof < DEPTH_OF_FIELD {
-            let mx = (rx / x_size).floor() as u32;
-            let my = (ry / y_size).floor() as u32;
-
-            if mx < map.length_x && my < map.length_y && map.tiles[my as usize][mx as usize] == 1 {
-                dof = DEPTH_OF_FIELD;
-
-                vx = rx;
-                vy = ry;
-                dis_v = dist(player_coordinate_x, player_coordinate_y, vx, vy);
-            } else {
-                rx += xo;
-                ry += yo;
-                dof += 1;
-            }
-        }
-
-        if dis_v < dis_h {
-            rx = vx;
-            ry = vy;
-        }
-        if dis_h < dis_v {
-            rx = hx;
-            ry = hy;
-        }
-        rays.push(Vertex {
-            position: [player_coordinate_x, player_coordinate_y],
-            color: [0.0, 1.0, 0.0],
-        });
-        rays.push(Vertex {
-            position: [rx, ry],
-            color: [0.0, 1.0, 0.0],
-        });
-
-        ray_angle += 1.0f32.to_radians();
-        ray_angle.normalize_as_angle();
+    let mut hit = false;
+    while hit {
+        hit = true;
     }
+
+    rays.push(Vertex {
+        position: [ray_start_x, ray_start_y],
+        color: [0.0, 1.0, 0.0],
+    });
+
     rays
 }
 

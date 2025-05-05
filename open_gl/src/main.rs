@@ -77,7 +77,7 @@ fn main() {
 }
 
 fn initialize_state(display: Display<WindowSurface>, program: Program) -> AppState {
-    let player_position = PlayerPosition::new(Point::from(500.0, 500.0), START_CIRCUNFERENCE);
+    let player_position = PlayerPosition::new(Point::from(500.0, 500.0), 30.0f32.to_radians());
 
     let map = Map::new();
 
