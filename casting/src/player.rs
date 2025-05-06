@@ -3,7 +3,7 @@ use crate::math::Angle;
 pub const VELOCITY_MULTIPLIER: f32 = 2.5;
 pub const SENSITIVITY_MULTIPLIER: f32 = 0.03;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -58,6 +58,6 @@ impl PlayerPosition {
             Direction::Right => self.angle -= SENSITIVITY_MULTIPLIER,
         }
 
-        self.angle.normalize_as_angle();
+        self.angle.normalize_as_radians();
     }
 }

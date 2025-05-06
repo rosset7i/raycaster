@@ -8,7 +8,6 @@ use canva::{VertexBase, get_map_buffer, get_player_buffer, get_rays_buffer};
 use casting::{
     consts::{WINDOW_HEIGHT, WINDOW_WIDTH},
     map::Map,
-    math::START_CIRCUNFERENCE,
     player::{Direction, PlayerPosition, Point},
     raycasting::{get_map_vertices, get_player_vertices, get_ray_vertices},
 };
@@ -77,7 +76,7 @@ fn main() {
 }
 
 fn initialize_state(display: Display<WindowSurface>, program: Program) -> AppState {
-    let player_position = PlayerPosition::new(Point::from(500.0, 500.0), START_CIRCUNFERENCE);
+    let player_position = PlayerPosition::new(Point::from(500.0, 500.0), 0.0);
 
     let map = Map::new();
 

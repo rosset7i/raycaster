@@ -1,11 +1,14 @@
+use std::f32::consts::{FRAC_PI_2, PI};
+
 use crate::{
     map::Map,
-    math::{Angle, HALF_CIRCUNFERENCE, ONE_FORTH_CIRCUNFERENCE, THREE_FORTH_CIRCUNFERENCE},
-    player::PlayerPosition,
+    math::Angle,
+    player::{PlayerPosition, Point},
 };
 
 pub const OFFSET: f32 = 0.0001;
 pub const DEPTH_OF_FIELD: u32 = 10;
+pub const FIELD_OF_VISION: usize = 60;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Vertex {
@@ -46,29 +49,17 @@ pub fn get_player_vertices(player_position: &PlayerPosition) -> Vec<Vertex> {
 }
 
 pub fn get_map_vertices(map: &Map) -> Vec<Vertex> {
-    let (x_size, y_size) = map.get_tile_size();
+    let (tile_height, tile_width) = map.get_tile_size();
 
     map.tiles
         .iter()
         .enumerate()
         .flat_map(|(y, row)| {
-            row.iter().enumerate().filter_map(move |(x, value)| {
+            row.iter().enumerate().map(move |(x, value)| {
                 if *value != 0 {
-                    Some(get_tile(
-                        x as f32,
-                        y as f32,
-                        x_size,
-                        y_size,
-                        [1.0, 0.0, 0.0],
-                    ))
+                    get_tile(x as f32, y as f32, tile_height, tile_width, [1.0, 0.0, 0.0])
                 } else {
-                    Some(get_tile(
-                        x as f32,
-                        y as f32,
-                        x_size,
-                        y_size,
-                        [0.3, 0.3, 0.3],
-                    ))
+                    get_tile(x as f32, y as f32, tile_height, tile_width, [0.3, 0.3, 0.3])
                 }
             })
         })
@@ -77,136 +68,118 @@ pub fn get_map_vertices(map: &Map) -> Vec<Vertex> {
 }
 
 pub fn get_ray_vertices(player_position: &PlayerPosition, map: &Map) -> Vec<Vertex> {
-    let (x_size, y_size) = map.get_tile_size();
+    let (tile_width, tile_height) = map.get_tile_size();
+    let mut ray_angle = (player_position.angle - 30.0f32.to_radians()).normalize_as_radians();
 
-    let player_coordinate_y = player_position.coordinates.y;
-    let player_coordinate_x = player_position.coordinates.x;
-    let mut ray_angle = player_position.angle - 30.0f32.to_radians();
-    ray_angle.normalize_as_angle();
+    let mut rays = Vec::with_capacity(FIELD_OF_VISION * 2);
 
-    let mut rx: f32 = 0.0;
-    let mut ry: f32 = 0.0;
-    let mut xo: f32 = 0.0;
-    let mut yo: f32 = 0.0;
+    for _i in 0..FIELD_OF_VISION {
+        let (horizontal_hit, horizontal_dist) = cast_ray(
+            &player_position.coordinates,
+            ray_angle,
+            tile_width,
+            tile_height,
+            map,
+            true,
+        );
 
-    let mut rays: Vec<Vertex> = vec![];
+        let (vertical_hit, vertical_dist) = cast_ray(
+            &player_position.coordinates,
+            ray_angle,
+            tile_width,
+            tile_height,
+            map,
+            false,
+        );
 
-    for _i in 0..60 {
-        //VERTICAL
-        let mut dof = 0;
-        let mut dis_h: f32 = 1000000.0;
-        let mut hx = player_coordinate_x;
-        let mut hy = player_coordinate_y;
-        let a_tan: f32 = -1.0 / ray_angle.tan();
+        let hit_point = if horizontal_dist < vertical_dist {
+            horizontal_hit
+        } else {
+            vertical_hit
+        };
 
-        if ray_angle < HALF_CIRCUNFERENCE {
-            ry = ((player_coordinate_y / y_size).trunc() * y_size) + y_size + OFFSET;
-            rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
-            yo = y_size;
-            xo = -yo * a_tan;
-        }
-
-        if ray_angle > HALF_CIRCUNFERENCE {
-            ry = ((player_coordinate_y / y_size).trunc() * y_size) - OFFSET;
-            rx = (player_coordinate_y - ry) * a_tan + player_coordinate_x;
-            yo = -y_size;
-            xo = -yo * a_tan;
-        }
-
-        if ray_angle == 0.0 || ray_angle == HALF_CIRCUNFERENCE {
-            rx = player_coordinate_x;
-            ry = player_coordinate_y;
-            dof = DEPTH_OF_FIELD;
-        }
-
-        while dof < DEPTH_OF_FIELD {
-            let mx = (rx / x_size).floor() as u32;
-            let my = (ry / y_size).floor() as u32;
-
-            if mx < map.length_x && my < map.length_y && map.tiles[my as usize][mx as usize] == 1 {
-                dof = DEPTH_OF_FIELD;
-                hx = rx;
-                hy = ry;
-                dis_h = dist(player_coordinate_x, player_coordinate_y, hx, hy);
-            } else {
-                rx += xo;
-                ry += yo;
-                dof += 1;
-            }
-        }
-
-        dof = 0;
-        let a_tan_neg: f32 = -ray_angle.tan();
-        let mut dis_v: f32 = 1000000.0;
-        let mut vx = player_coordinate_x;
-        let mut vy = player_coordinate_y;
-        if (ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
-            rx = ((player_coordinate_x / x_size).trunc() * x_size) - OFFSET;
-            ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
-            xo = -x_size;
-            yo = -xo * a_tan_neg;
-        }
-
-        if !(ONE_FORTH_CIRCUNFERENCE..THREE_FORTH_CIRCUNFERENCE).contains(&ray_angle) {
-            rx = ((player_coordinate_x / x_size).trunc() * x_size) + x_size + OFFSET;
-            ry = (player_coordinate_x - rx) * a_tan_neg + player_coordinate_y;
-            xo = x_size;
-            yo = -xo * a_tan_neg;
-        }
-
-        if ray_angle == 0.0 || ray_angle == HALF_CIRCUNFERENCE {
-            rx = player_coordinate_x;
-            ry = player_coordinate_y;
-            dof = DEPTH_OF_FIELD;
-        }
-
-        while dof < DEPTH_OF_FIELD {
-            let mx = (rx / x_size).floor() as u32;
-            let my = (ry / y_size).floor() as u32;
-
-            if mx < map.length_x && my < map.length_y && map.tiles[my as usize][mx as usize] == 1 {
-                dof = DEPTH_OF_FIELD;
-
-                vx = rx;
-                vy = ry;
-                dis_v = dist(player_coordinate_x, player_coordinate_y, vx, vy);
-            } else {
-                rx += xo;
-                ry += yo;
-                dof += 1;
-            }
-        }
-
-        if dis_v < dis_h {
-            rx = vx;
-            ry = vy;
-        }
-        if dis_h < dis_v {
-            rx = hx;
-            ry = hy;
-        }
         rays.push(Vertex {
-            position: [player_coordinate_x, player_coordinate_y],
+            position: [player_position.coordinates.x, player_position.coordinates.y],
             color: [0.0, 1.0, 0.0],
         });
         rays.push(Vertex {
-            position: [rx, ry],
+            position: [hit_point.x, hit_point.y],
             color: [0.0, 1.0, 0.0],
         });
 
-        ray_angle += 1.0f32.to_radians();
-        ray_angle.normalize_as_angle();
+        ray_angle = (ray_angle + 1.0f32.to_radians()).normalize_as_radians();
     }
     rays
 }
 
-fn dist(ax: f32, ay: f32, bx: f32, by: f32) -> f32 {
-    ((bx - ax) * (bx - ax) + (by - ay) * (by - ay)).sqrt()
+fn cast_ray(
+    ray_origin: &Point,
+    angle: f32,
+    tile_width: f32,
+    tile_heigth: f32,
+    map: &Map,
+    horizontal: bool,
+) -> (Point, f32) {
+    let (mut ray_x, mut ray_y, step_x, step_y): (f32, f32, f32, f32);
+    let mut depth = 0;
+    let mut hit = ray_origin.clone();
+
+    if horizontal {
+        let atan = -1.0 / angle.tan();
+        if angle < PI {
+            ray_y = (ray_origin.y / tile_heigth).floor() * tile_heigth + tile_heigth + OFFSET;
+            ray_x = (ray_origin.y - ray_y) * atan + ray_origin.x;
+            step_y = tile_heigth;
+            step_x = -step_y * atan;
+        } else if angle > PI {
+            ray_y = (ray_origin.y / tile_heigth).floor() * tile_heigth - OFFSET;
+            ray_x = (ray_origin.y - ray_y) * atan + ray_origin.x;
+            step_y = -tile_heigth;
+            step_x = -step_y * atan;
+        } else {
+            return (ray_origin.clone(), f32::MAX);
+        }
+    } else {
+        let ntan = -angle.tan();
+        if (FRAC_PI_2..FRAC_PI_2 * 3.0).contains(&angle) {
+            ray_x = (ray_origin.x / tile_width).floor() * tile_width - OFFSET;
+            ray_y = (ray_origin.x - ray_x) * ntan + ray_origin.y;
+            step_x = -tile_width;
+            step_y = -step_x * ntan;
+        } else {
+            ray_x = (ray_origin.x / tile_width).floor() * tile_width + tile_width + OFFSET;
+            ray_y = (ray_origin.x - ray_x) * ntan + ray_origin.y;
+            step_x = tile_width;
+            step_y = -step_x * ntan;
+        }
+    }
+
+    while depth < DEPTH_OF_FIELD {
+        let map_x = (ray_x / tile_width).floor() as usize;
+        let map_y = (ray_y / tile_heigth).floor() as usize;
+
+        if map_x < map.length_x as usize
+            && map_y < map.length_y as usize
+            && map.tiles[map_y][map_x] == 1
+        {
+            hit = Point { x: ray_x, y: ray_y };
+            let distance = dist(ray_origin, ray_x, ray_y);
+            return (hit, distance);
+        }
+
+        ray_x += step_x;
+        ray_y += step_y;
+        depth += 1;
+    }
+
+    (hit, f32::MAX)
+}
+
+fn dist(point: &Point, bx: f32, by: f32) -> f32 {
+    ((bx - point.x) * (bx - point.x) + (by - point.y) * (by - point.y)).sqrt()
 }
 
 fn get_tile(x: f32, y: f32, x_size: f32, y_size: f32, color: [f32; 3]) -> Vec<Vertex> {
-    let color = color;
-
     let x = x * x_size;
     let y = y * y_size;
 
