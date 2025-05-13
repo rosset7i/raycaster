@@ -137,7 +137,7 @@ fn cast_ray(
             step_y = -tile_heigth;
             step_x = -step_y * atan;
         } else {
-            return (ray_origin.clone(), f32::MAX);
+            return (hit, f32::MAX);
         }
     } else {
         let ntan = -angle.tan();
@@ -163,7 +163,7 @@ fn cast_ray(
             && map.tiles[map_y][map_x] == 1
         {
             hit = Point { x: ray_x, y: ray_y };
-            let distance = dist(ray_origin, ray_x, ray_y);
+            let distance = get_distance(ray_origin, ray_x, ray_y);
             return (hit, distance);
         }
 
@@ -175,8 +175,8 @@ fn cast_ray(
     (hit, f32::MAX)
 }
 
-fn dist(point: &Point, bx: f32, by: f32) -> f32 {
-    ((bx - point.x) * (bx - point.x) + (by - point.y) * (by - point.y)).sqrt()
+fn get_distance(ray_origin: &Point, ray_x: f32, ray_y: f32) -> f32 {
+    ((ray_x - ray_origin.x).powi(2) + (ray_y - ray_origin.y).powi(2)).sqrt()
 }
 
 fn get_tile(x: f32, y: f32, x_size: f32, y_size: f32, color: [f32; 3]) -> Vec<Vertex> {
